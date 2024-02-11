@@ -1,6 +1,11 @@
 # Калькулятор
+
+# График
+import matplotlib.pyplot as plt
+import numpy as np
+import sympy as sp
+
 from tkinter import*
-import traceback
 
 # Функция выбора типа калькулятора
 def calcChoice():
@@ -8,6 +13,7 @@ def calcChoice():
         frSimpleCalc.grid(row = 1, column = 0,
         columnspan = 4)
         frEquatCalc.grid_remove()
+        plt.close()
     else:
         frEquatCalc.grid(row = 1, column = 0,
         columnspan = 4, sticky = 'w')
@@ -62,8 +68,6 @@ def btn_click(item):
 # Общая рамка калькулятора
 root = Tk()
 root.title('Калькулятор')
-icon = PhotoImage(file = "AAA.png")
-root.iconphoto(False, icon)
 root.resizable(0, 0)
 
 # Рамка выбора калькулятора
@@ -136,53 +140,69 @@ for row in range(4):
             sticky="nsew", padx=1, pady=1)
 
 
-######################################
-# Математика уравнений
+########################
+# Математика уравнений #
+########################
+# Выражение уравнения (не на экране)
 expressionX = ''
 
-# Перехват ошибок
+# Уравнения для вывода на График
+plotEquat = ''
+
+# Перехваты ошибок
 def checkEquat(expressionX):    
     # Перехват пустого нажатия кнопки "Решение",    
-    if expressionX == '':
+    try:
+        checkEquat2(expressionX)
+    except (IndexError, SyntaxError):
+        txtSolutionX.grid_remove()
+        plt.close()
+        expressionX == ''
         txtErrorX.grid(
         row = 7, column = 0,
         columnspan = 4, sticky = 'w')
         txtErrorX.insert(1.0,
-        'Введите уравнение!\n')
-        
+        'Нажмите клавишу "С".\nВведите уравнение!\n')
+
+def checkEquat2(expressionX):                
     # Несколько знаков '='
-    elif expressionX.count('=') > 1:
+    if expressionX.count('=') > 1:
+        txtSolutionX.grid_remove()
+        plt.close()
         txtErrorX.grid(
         row = 7, column = 0,
         columnspan = 4, sticky = 'w')
         txtErrorX.insert(1.0,
         'Правильно введите уравнение!\n')
         txtErrorX.insert(2.0,
-        'Оно не может содержать несколько знаков "="\n')
+        'Оно не может содержать несколько знаков "=".\n')
     
     # Перехват ошибок ввода, напр-р: 6x+7 без "="
     else:
         try:
-            checkEquat2(expressionX)
+            checkEquat3(expressionX)
         except (IndexError, SyntaxError):
             txtSolutionX.grid_remove()
+            plt.close()
             txtErrorX.grid(
                 row = 7, column = 0,
                 columnspan = 4, sticky = 'w')
             txtErrorX.insert(1.0,
                 'Ошибка ввода уравнения!\nНажмите клавишу "С"')
-
+    
 # Перехват ошибок ввода типа: 2х3
-def checkEquat2(expressionX):
+def checkEquat3(expressionX):
     # Список ошибочных подстрок
     er = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6',
-        'x7', 'x8', 'x9', 'x0',
+        'x7', 'x8', 'x9', 'x0', '+-', '-+' ,
         'x²1', 'x²2', 'x²3', 'x²4', 'x²5',
         'x²6', 'x²7', 'x²8', 'x²9', 'x²0',
-        'xx','x²x', 'xx²', 'x²x²']
+        'xx','x²x', 'xx²', 'x²x²', '*+', '*-',
+        '-*', '+*', '+=', '-=']
     for i in er:
         if i in expressionX:
             txtSolutionX.grid_remove()
+            plt.close()
             txtErrorX.grid(
                 row = 7, column = 0,
                 columnspan = 4, sticky = 'w')
@@ -191,20 +211,33 @@ def checkEquat2(expressionX):
             txtErrorX.insert(2.0,
                 'Нажмите клавишу "С"\n')
             break
+        # Выражение заканчивается на знак "="
+        elif [-1] == '=':
+            txtSolutionX.grid_remove()
+            try:
+                checkEquat4(expressionX)
+            except Exception:
+                plt.close()
+                txtErrorX.grid(
+                    row = 7, column = 0,
+                    columnspan = 4, sticky = 'w')
+                txtErrorX.insert(1.0,
+                    'Уравнение введено неполностью: ' + txtSolutionX + ' !\n')
+                txtErrorX.insert(2.0,
+                    'Нажмите клавишу "С"\n')            
         else:
-            equat(expressionX)
-    
-    
+            checkEquat4(expressionX)
+
+def checkEquat4(expressionX):
+    try:
+        equat(expressionX)
+    except (IndexError, SyntaxError):
+        txtSolutionX.grid_remove()
+        plt.close()
+        
 # F превращает строку уравнения в вид
 # Чл1 + Чл2 + ... Члn = 0
-
 def equat(expressionX):
-    txtSolutionX.grid(row = 7, column = 0,
-        columnspan = 4, sticky = 'w')
-    txtSolutionX.insert(1.0,
-        'Вы ввели: ' + expressionX + '\n') # 1
-    txtSolutionX.insert(2.0, 'Решение: \n') #2
-
     # Делим уравнение на две части по знаку "="
     y = expressionX.split('=')
     yl = y[0]
@@ -212,7 +245,6 @@ def equat(expressionX):
     
     # В правой части меняем знаки членов
     #на противоположные
-
     new = ''
     for i in yr:
         if i == '+':
@@ -233,27 +265,85 @@ def equat(expressionX):
 
     # Выражение без '=0'
     y = yl + yr
-    
     # Выражение c '=0'
     y0 = y + '=0\n'
+    equatDisplay(expressionX, y0)
+    choiceEquat(y)
+    return y
+
+# Вывод на консоль выражения y(без =0)
+def outConsole():
+    pass
+    #print(equat(expressionX))
+
+# Вывод на текстовое поле первых трёх строк
+def equatDisplay(expressionX, y0):
+    txtSolutionX.grid(row = 7, column = 0,
+        columnspan = 4, sticky = 'w')
+    txtSolutionX.insert(1.0,
+        'Вы ввели: ' + expressionX + '\n') # 1
+    txtSolutionX.insert(2.0, 'Решение: \n') #2
     txtSolutionX.insert(3.0, y0) #3
+
+##########################
+# Добавляем График ф-ции #
+##########################
+def plotShow():
+    # Создание символьной переменной
+    x = sp.symbols('x')
+
+    # Определение функции с использованием SymPy
+    y_expr = equat(expressionX)
     
-    # Определяем тип уравнения:
-    # линейное оно или квадратное 
-    if '²' in y0:
+    # Эта переменная пойдет на метку графика
+    y_expY = 'y=' + y_expr
+    
+    # Адаптируем формулу под Sympy
+    y_expr = y_expr.replace('x', '*x')
+    y_expr = y_expr.replace('²', '**2')
+    y_expr = y_expr.replace('+*', '+')
+    y_expr = y_expr.replace('-*', '-')
+    if y_expr[0] == '*':
+        y_expr = y_expr[1:]
+
+    # Преобразование в функцию, пригодную для использования с библиотекой Matplotlib
+    y_func = sp.lambdify(x, y_expr, 'numpy')
+
+    # Генерация значений x от -10 до 10
+    x_values = np.linspace(-10, 10, 100)
+    
+    # Вычисление соответствующих значений y
+    y_values = y_func(x_values)
+
+    # Построение графика с использованием Matplotlib
+    plt.plot(x_values, y_values, label=y_expY)
+    plt.xlabel('Ось x')
+    plt.ylabel('Ось y')
+    plt.title('График функции.')
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.axvline(0, color='black', linewidth=0.5)
+    plt.grid(color='gray', linestyle='--', linewidth=0.5)
+    plt.legend()
+    plt.show()
+    
+
+
+# Определяем тип уравнения:
+# линейное оно или квадратное
+def choiceEquat(y):
+    if '²' in y:
         y = termEquat(y)
         square(y)
     else:
         y = termEquat(y)
         linear(y)
 
-
 # Ф-ция разбивает строку на список [членов]
 def termEquat(y):
     y = y.replace('+', ',+')
     y = y.replace('-', ',-')
-    y = y.split(',')
-    return y
+    listy = y.split(',')
+    return listy
     
 ### Функция решения линейного уравнения
 def linear(y):
@@ -268,7 +358,7 @@ def linear(y):
             yesx += i
         else:
             nox += i
-
+    #print(yesx)
     # Выводим строку коэффициента "а" на eval()
     yesx = ''.join(yesx)
     yesx = yesx.replace('x', '*1')
@@ -311,7 +401,11 @@ def linear(y):
         x = -b/a
         x = round(x, 3)
         xx = 'x = ' + str(x) + '\n'
-        txtSolutionX.insert(9.0, xx)  #9
+        txtSolutionX.insert(9.0, xx + '\n')  #9
+        txtSolutionX.insert(10.0, '\n')
+        txtSolutionX.insert(11.0, '\n')
+        txtSolutionX.insert(12.0, '\n')
+        txtSolutionX.insert(13.0, '\n')
 
 ########################################
 # Функция решения квдратного уравнения
@@ -366,7 +460,7 @@ def square(y):
     # Приводим уравнение к виду: ax²+bx+c=0
     yy = str(a) + 'x²+' + str(b) + 'x+' + str(c) + '=0\n'
     yy = yy.replace('+-', '-')
-    yy = yy.replace('0x²', '')
+    #yy = yy.replace('0x²', '')
     yy = yy.replace('+-', '-')
     yy = yy.replace('-=', '=')
     yy = yy.replace('+=', '=')
@@ -383,8 +477,8 @@ def square(y):
                 columnspan = 4, sticky = 'w')
             txtErrorX.insert(1.0, 'Выражение ' + str(y) + 'это не уравнение.')
         else:
-            y = yy[:-3]
-            linear(y)
+            y0 = yy[:-3]
+            choiceEquat(y0)
     else:
         # Решаем текущее кв_ уравнение
         txtSolutionX.insert(4.0, yy)  #4
@@ -411,7 +505,12 @@ def square(y):
             txtSolutionX.insert(9.0,
                 'Дискриминант отрицателен.\n')
             txtSolutionX.insert(10.0,
-                'Уравнение не имеет действительных решений.')
+                'Уравнение не имеет действительных решений.\n')
+            txtSolutionX.insert(11.0, '\n')
+            txtSolutionX.insert(12.0, '\n')
+            txtSolutionX.insert(13.0, '\n')
+            txtSolutionX.insert(14.0, '\n')
+
 
         elif d == 0:
             txtSolutionX.insert(9.0,   # 9, 10
@@ -421,7 +520,7 @@ def square(y):
             xx = 'x=' + str(-b) + '/(2*' + str(a) + ')\n'
             txtSolutionX.insert(12.0, xx)
             xxx = 'x=' + str(x) + '\n'
-            txtSolutionX.insert(13.0, xxx)
+            txtSolutionX.insert(13.0, xxx + '\n')
         else:
             txtSolutionX.insert(9.0,  # 9, 10, 11
                 'Дискриминант больше нуля.\nУравнение имеет два корня.\nx = (-b +- √D) / 2a, т.е.\n')
@@ -436,8 +535,6 @@ def square(y):
             txtSolutionX.insert(12.0, xx1 + ' = ' + str(x1) + '\n')
             txtSolutionX.insert(13.0, xx2 + ' = ' + str(x2) + '\n')
             txtSolutionX.insert(14.0, '=====================================\n')
-
-#equat(expressionX)
 
 ####################################
 # Логика калькулятора уравнения
@@ -460,22 +557,16 @@ def btClearX():
     txtSolutionX.grid_remove()
     txtErrorX.delete(0.0, END)
     txtErrorX.grid_remove()
+    plotEquat = ""
+    plt.close()
 
 # Логика основных кнопок
 def btn_clickX(itemX):
     global expressionX
-
-    try:
-        entX['state'] = "normal"
-        expressionX += itemX
-        entX.insert(END, itemX)
-
-        entX['state'] = "readonly"
-    except SyntaxError:
-        entX.delete(0, END)
-        entX.insert(0, 'Ошибка')
-        txtSolutionX.insert(2.0, 'Ошибка')
-        
+    entX['state'] = "normal"
+    expressionX += itemX
+    entX.insert(END, itemX)
+    entX['state'] = "readonly"
 
 # Рамка калькулятора уравнения
 frEquatCalc = Frame(root, relief = 'raised',
@@ -485,9 +576,7 @@ frEquatCalc = Frame(root, relief = 'raised',
 entX = Entry(frEquatCalc,
     font = 'Arial 30 bold',
     width = 20, relief = 'sunken',
-    borderwidth = 8
-    #state="readonly"
-             )
+    borderwidth = 8)
 entX.grid(
     row = 1, column = 0, columnspan = 4)
 
@@ -497,15 +586,15 @@ txtSolutionX = Text(frEquatCalc, width = 41,
 
 # Окно информации об ошибках
 txtErrorX = Text(frEquatCalc, width = 41,
-    height = 2, font = 'Arial 15')
+    height = 2, font = 'Arial 15', fg = 'red')
 
 # Кнопка 'Решение: '
 btnSolutionX = Button(frEquatCalc,
     text='Решение: ',font='Arial 15 bold',
     width = 17, bg = '#FFD700',
     relief = 'raised', borderwidth = 8,
-    command = lambda: checkEquat(expressionX)
-    ).grid(
+    command = lambda: [checkEquat(expressionX),
+    plotShow()]).grid(
     row=2, column=0, columnspan=2)
 
 # Кнопка '<< X'
@@ -545,9 +634,9 @@ for row in range(4):
             row=row + 3, column=col,
             sticky="nsew", padx=1, pady=1)
 
-
 # Вызов функции выбора калькулятора,
 # чтобы появилась рамка калькулятора
 calcChoice()
 
 root.mainloop()
+
